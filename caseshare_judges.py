@@ -1,15 +1,12 @@
 import pymysql,re
 
-
 class parse_judges():
     def __init__(self):
         self.conn=pymysql.Connect(host='127.0.0.1',port=3306,user='root',passwd='root',db='lawdata',charset='utf8')
-
+        self.cursor=self.conn.cursor()
     def get_data(self,sql):
-        conn = self.conn    
-        cursor =conn.cursor()        
-        cursor.execute(sql)
-        result=cursor.fetchall()
+        self.cursor.execute(sql)
+        result=self.cursor.fetchall()
         return result
 
     def parse(self,sql):
@@ -20,7 +17,34 @@ class parse_judges():
             judges_info=item[1]
             # print(judges_info)
             judges = self.re_judges_info(judges_info)
-            print(id,judges)
+            # print(id,judges)
+            if judges!=[]:
+                for info in judges:
+                    for k,v in info.items():
+                        # print(id,k,v)
+                        self.write_data(k,v,id)
+                        print(id)
+
+
+
+    def write_data(self,judge_title,judge_name,main_id):
+        '''
+        CREATE TABLE `caseshare_judges` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `judge_title` varchar(255) DEFAULT NULL,
+          `judge_name` varchar(255) DEFAULT NULL,
+          `main_id` int(11) NOT NULL,
+          `createdtime` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+          PRIMARY KEY (`id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        '''
+
+        sql = 'INSERT INTO caseshare_judges (`judge_title`,`judge_name`,`main_id`) VALUES (%(judge_title)s,%(judge_name)s,%(main_id)s)'
+        values = {'judge_title': judge_title,
+                  'judge_name':judge_name,
+                  'main_id':main_id}
+        self.cursor.execute(sql, values)
+        self.conn.commit()
     
     def re_judges_info(self,judges_info):
         list=judges_info.split('\r\n')
@@ -35,42 +59,47 @@ class parse_judges():
     def select(self,word):
         if '代理审判员' in word:
             data ={
-                '代理审判员':word.replace('代理审判员','')
+                '代理审判员':word.replace('代理审判员','').replace(':','').replace('：','')
             } 
             return data           
         elif '助理审判员' in word:
             data ={
-                '助理审判员':word.replace('助理审判员','')
+                '助理审判员':word.replace('助理审判员','').replace(':','').replace('：','')
             } 
-            return data           
+            return data
+        elif '代理书记员' in word:
+            data ={
+                '代理书记员':word.replace('代理书记员','').replace(':','').replace('：','')
+            }
+            return data
         elif '审判长' in word:
             data ={
-                '审判长':word.replace('审判长','')
+                '审判长':word.replace('审判长','').replace(':','').replace('：','')
             } 
             return data           
         elif '人民陪审员' in word:
             data ={
-                '人民陪审员':word.replace('人民陪审员','')
+                '人民陪审员':word.replace('人民陪审员','').replace(':','').replace('：','')
             }   
             return data         
         elif '执行员' in word:
             data ={
-                '执行员':word.replace('执行员','')
+                '执行员':word.replace('执行员','').replace(':','').replace('：','')
             }  
             return data          
         elif '法官助理' in word:
             data ={
-                '法官助理':word.replace('法官助理','')
+                '法官助理':word.replace('法官助理','').replace(':','').replace('：','')
             }  
             return data          
         elif '书记员' in word:
             data ={
-                '书记员':word.replace('书记员','')
+                '书记员':word.replace('书记员','').replace(':','').replace('：','')
             } 
             return data
         elif '审判员' in word:
             data ={
-                '审判员':word.replace('审判员','')
+                '审判员':word.replace('审判员','').replace(':','').replace('：','')
             } 
             return data 
         else:
@@ -78,7 +107,8 @@ class parse_judges():
         
         
 if __name__=='__main__':
-    sql='SELECT id,judges FROM caseshare_data_new LIMIT 10000'
+    # sql='SELECT id,judges FROM caseshare_data_new LIMIT 10000'
+    sql = 'SELECT id,judges FROM caseshare_data_new'
     a=parse_judges()
     a.parse(sql)
     # word=a.parse(sql)
