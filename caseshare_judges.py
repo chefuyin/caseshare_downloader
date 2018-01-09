@@ -1,4 +1,4 @@
-import pymysql,re
+import pymysql
 
 class parse_judges():
     def __init__(self):
@@ -12,7 +12,13 @@ class parse_judges():
     def parse(self,sql):
         result = self.get_data(sql)
         # print(result[0])
+        i=1
         for item in result:
+            num = result.index(item)
+            if num / 5000==i:#每5000个case提交一次
+                # print(num,'*'*20)
+                self.conn.commit()
+                i+=1
             id=item[0]
             judges_info=item[1]
             # print(judges_info)
@@ -24,7 +30,8 @@ class parse_judges():
                         # print(id,k,v)
                         self.write_data(k,v,id)
                         print(id)
-
+        self.conn.commit()
+        # print('end')
 
 
     def write_data(self,judge_title,judge_name,main_id):
@@ -44,7 +51,7 @@ class parse_judges():
                   'judge_name':judge_name,
                   'main_id':main_id}
         self.cursor.execute(sql, values)
-        self.conn.commit()
+        # self.conn.commit()##一次一提交存在效率障碍
     
     def re_judges_info(self,judges_info):
         list=judges_info.split('\r\n')
