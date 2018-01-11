@@ -1,13 +1,21 @@
-import pymysql
+import pymysql,jieba
+# jieba.load_userdict('date.txt')
+jieba.load_userdict('judge_dict.txt')
 
-class parse_judges():
+
+
+
+class ParseJudges():
     def __init__(self):
         self.conn=pymysql.Connect(host='127.0.0.1',port=3306,user='root',passwd='root',db='lawdata',charset='utf8')
         self.cursor=self.conn.cursor()
+
+
     def get_data(self,sql):
         self.cursor.execute(sql)
         result=self.cursor.fetchall()
         return result
+
 
     def parse(self,sql):
         result = self.get_data(sql)
@@ -45,12 +53,14 @@ class parse_judges():
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         '''
-
-        sql = 'INSERT INTO caseshare_judges (`judge_title`,`judge_name`,`main_id`) VALUES (%(judge_title)s,%(judge_name)s,%(main_id)s)'
-        values = {'judge_title': judge_title,
-                  'judge_name':judge_name,
-                  'main_id':main_id}
-        self.cursor.execute(sql, values)
+        # sql = 'INSERT INTO caseshare_judges (`judge_title`,`judge_name`,`main_id`) VALUES (%(judge_title)s,%(judge_name)s,%(main_id)s)'
+        # values = {'judge_title': judge_title,
+        #           'judge_name':judge_name,
+        #           'main_id':main_id}
+        # self.cursor.execute(sql, values)
+        sql = 'INSERT INTO caseshare_judges (`judge_title`,`judge_name`,`main_id`) ' \
+              'VALUES ({},{},{})'.format(judge_title,judge_name,main_id)
+        self.cursor.execute(sql)
         # self.conn.commit()##一次一提交存在效率障碍
     
     def re_judges_info(self,judges_info):
@@ -79,6 +89,11 @@ class parse_judges():
                 '代理书记员':word.replace('代理书记员','').replace(':','').replace('：','')
             }
             return data
+        elif '代书记员' in word:
+            data ={
+                '代书记员':word.replace('代书记员','').replace(':','').replace('：','')
+            }
+            return data
         elif '审判长' in word:
             data ={
                 '审判长':word.replace('审判长','').replace(':','').replace('：','')
@@ -88,7 +103,12 @@ class parse_judges():
             data ={
                 '人民陪审员':word.replace('人民陪审员','').replace(':','').replace('：','')
             }   
-            return data         
+            return data
+        elif '人民审判员' in word:
+            data ={
+                '人民审判员':word.replace('人民审判员','').replace(':','').replace('：','')
+            }
+            return data
         elif '执行员' in word:
             data ={
                 '执行员':word.replace('执行员','').replace(':','').replace('：','')
@@ -110,16 +130,95 @@ class parse_judges():
             } 
             return data 
         else:
-            return None      
+            return None
+
+    def select_incorrect(self,sql):
+        '''choose the incorrect info'''
+        result= self.get_data(sql)
+        for info in result:
+            id=info[0]
+            judge_title = info[1]
+            judge_name=info[2]
+            main_id= info[3]
+            list=[i for i in judge_name]
+            if len(list)>=4:
+                print(main_id,judge_title,judge_name)
+
+    def search(self,main_id):
+        sql= 'SELECT judges FROM caseshare_data_new WHERE id={}'.format(str(main_id))
+        # values={'main_id':str(main_id)}
+        cursor= self.conn.cursor()
+        cursor.execute(sql)
+        result=cursor.fetchall()
+        return result[0][0]
+
+
+    def write_date_dict(self,word):
+        word_list= word.split('\r\n')
+        list=[]
+        for w in word_list:
+            if self.date_distinc(w):
+                if w!='':
+            # seg_list=jieba.cut(word0,cut_all=False)
+            # list=[i for i in seg_list]
+            # if len(list)>=5:
+                    list.append(w)
+        for i in self.set(list):
+            print(i)
+            self.write_txt('date.txt',i)
+
+            # print(','.join(seg_list))
+
+    def set(self,word_list):
+        if type(word_list) is list:
+            return list(set(word_list))
+
+    def date_distinc(self,date):
+        '''判断是否为日期，应包含年月日'''
+        list= [i for i in date]
+        if '年' in list and '月' in list and '日'in list:
+            if 9<=len(list)<=11:
+                return True
+
+    def write_txt(self,filename,line):
+        with open(filename,'a+',encoding='utf-8') as f:
+            f.write(line+'\n')
+
+    def cut(self,word):
+        seg_list=jieba.cut(word)
+        print('/'.join(seg_list))
+
+
         
         
 if __name__=='__main__':
+    '''select incorrect info'''
+    sql='SELECT id,judge_title,judge_name,main_id FROM caseshare_judges LIMIT 10000'
+    a=ParseJudges()
+    # a.select_incorrect(sql)
+    r=a.search(1304)
+    print(r)
+
+    '''write jieba dict'''
     # sql='SELECT id,judges FROM caseshare_data_new LIMIT 10000'
-    sql = 'SELECT id,judges FROM caseshare_data_new'
-    a=parse_judges()
-    a.parse(sql)
-    # word=a.parse(sql)
-    # a.re_judges_info(word)
+    # # sql = 'SELECT id,judges FROM caseshare_data_new'
+    # # sql='SELECT id,judge_title,judge_name,main_id FROM caseshare_judges'
+    # # sql = 'SELECT id,judge_name,main_id FROM caseshare_judges LIMIT 100'
+    # a=ParseJudges()
+    # result=a.get_data(sql)
+    # for i in result:
+    #     a.cut(i[1])
+
+
+
+
+    '''write data from main table'''
+    # # sql='SELECT id,judges FROM caseshare_data_new LIMIT 10000'
+    # sql = 'SELECT id,judges FROM caseshare_data_new'
+    # a=parse_judges()
+    # a.parse(sql)
+    # # word=a.parse(sql)
+    # # a.re_judges_info(word)
     
 
 

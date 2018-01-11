@@ -8,7 +8,7 @@
 from scrapy import signals
 import random
 # from scrapy.conf import settings
-from fake_useragent import UserAgent
+#from fake_useragent import UserAgent
 from .settings import USER_AGENT_LIST
 
 
